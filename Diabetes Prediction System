@@ -1,0 +1,143 @@
+# Diabetes Prediction
+
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn import svm
+from sklearn.metrics import accuracy_score
+
+import os
+from google.colab import drive
+
+# Create the parent directory if it doesn't exist
+os.makedirs('/content/drive', exist_ok=True)
+
+drive.mount('/content/drive/diabetes')
+
+import os
+# List the contents of the mounted directory to help locate the file
+print(os.listdir('/content/drive/diabetes'))
+
+# Once you've identified the correct file name and path, uncomment and modify the line below:
+diabetes = pd.read_csv('/content/drive/diabetes/MyDrive/diabetes.csv')
+diabetes.head()
+
+# Perform Exploratory Data Analysis (EDA)
+
+print("Dataset Information:")
+display(diabetes.info())
+
+
+display(diabetes.duplicated().sum())
+
+print("\nMissing Values:")
+display(diabetes.isnull().sum())
+
+print("\nDataset Description:")
+display(diabetes.describe())
+
+print("\nDistribution of the target variable (Outcome):")
+display(diabetes['Outcome'].value_counts())
+
+print("\nNumber of duplicate rows:")
+display(diabetes.duplicated().sum())
+
+diabetes.shape
+
+diabetes.groupby('Outcome').mean()
+
+
+X = diabetes.drop(columns = 'Outcome', axis=1)
+Y = diabetes['Outcome']
+
+print(X)
+
+print(Y)
+
+scaler = StandardScaler()
+scaler.fit(X)
+standardized_data = scaler.transform(X)
+
+X = standardized_data
+
+print('Standardized X data:')
+print(X)
+
+X = standardized_data
+Y = diabetes['Outcome']
+
+print(X)
+print(Y)
+
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, stratify=Y, random_state=2)
+
+print(X.shape, X_train.shape, X_test.shape)
+
+classifier = svm.SVC(kernel='linear')
+
+
+classifier.fit(X_train, Y_train)
+
+X_test_prediction = classifier.predict(X_test)
+testing_data_accuracy = accuracy_score(X_test_prediction, Y_test)
+print('Accuracy score on test data = ', testing_data_accuracy)
+
+def predict_diabetes_outcome(input_data):
+
+    feature_names = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
+    input_df = pd.DataFrame([input_data], columns=feature_names)
+
+
+    std_data = scaler.transform(input_df)
+    prediction = classifier.predict(std_data)
+
+    if (prediction[0] == 0):
+        return 'The person is NOT diabetic'
+    else:
+        return 'The person is DIABETIC'
+
+
+
+### How the Prediction 'The person is not diabetic' was Calculated
+
+For the input `2,166,120,30,25,25,0,47`, the `predict_diabetes_outcome` function performs the following steps:
+
+1.  **Input Conversion to DataFrame**: The input list `[2.0, 166.0, 120.0, 30.0, 25.0, 25.0, 0.0, 47.0]` is converted into a pandas DataFrame with the specified feature names (`Pregnancies`, `Glucose`, `BloodPressure`, `SkinThickness`, `Insulin`, `BMI`, `DiabetesPedigreeFunction`, `Age`). This ensures consistency with how the `StandardScaler` was originally fitted.
+
+2.  **Standardization**: This DataFrame is then passed to the `scaler.transform()` method. The `StandardScaler`, which was previously fitted on the entire `X` dataset, transforms this single input data point. This means it subtracts the mean and divides by the standard deviation for each feature, based on the statistics learned from the training data. This process converts the raw input values into a standardized format that the trained model expects.
+
+3.  **Prediction**: The standardized input data is then fed into the `classifier.predict()` method of the trained Support Vector Machine (SVM) model. The SVM model uses the patterns it learned during training to classify the standardized input as either 0 (not diabetic) or 1 (diabetic).
+
+4.  **Output**: In this specific case, the `classifier.predict()` method returned `[0]`, which the function then translates to the human-readable output: "The person is not diabetic".
+
+### Example Inputs for Interactive Prediction
+
+You can use the following examples when prompted to enter data in the interactive prediction cell:
+
+*   **Example 1 (Likely Diabetic):** `6, 148, 72, 35, 0, 33.6, 0.627, 50`
+*   **Example 2 (Likely Not Diabetic):** `1, 85, 66, 29, 0, 26.6, 0.351, 31`
+*   **Example 3 (Another Diabetic Case):** `5, 166, 72, 19, 175, 25.8, 0.587, 51`
+*   **Example 4 (Another Non-Diabetic Case):** `1, 103, 30, 38, 83, 43.3, 0.183, 33`
+
+Remember to enter the values separated by commas.
+
+print("Please enter the following patient data, separated by commas:")
+print("Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age")
+
+user_input_str = input("Enter data: ")
+
+try:
+
+    user_input_list = [float(x.strip()) for x in user_input_str.split(',')]
+
+
+    if len(user_input_list) == 8:
+        prediction_result = predict_diabetes_outcome(user_input_list)
+        print(prediction_result)
+    else:
+        print(f"Error: Expected 8 values but received {len(user_input_list)}. Please enter all 8 features.")
+except ValueError:
+    print("Error: Invalid input. Please ensure all values are numbers and separated by commas.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
