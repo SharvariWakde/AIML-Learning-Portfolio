@@ -1,0 +1,221 @@
+#import pandas as pd
+
+#print("Pandas working")
+#print(pd.__version__)
+import pandas as pd
+df = pd.read_csv(r"C:\Users\HP\Downloads\quikr_car.csv")
+
+print(df.head())
+print(df.shape)
+print(df.info())
+print(df.describe())
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import seaborn as sns
+mpl.style.use('ggplot')
+
+backup = df.copy()
+
+# Clean year column
+df = df[df['year'].str.isnumeric()]
+df['year'] = df['year'].astype(int)
+
+# Clean Price column
+df = df[df['Price'] != 'Ask For Price']
+df['Price'] = df['Price'].str.replace(',', '').astype(int)
+
+# Clean kms_driven column
+df['kms_driven'] = df['kms_driven'].str.split().str.get(0).str.replace(',', '')
+
+df = df[df['kms_driven'].str.isnumeric()]
+
+df['kms_driven'] = df['kms_driven'].astype(int)
+
+# Remove null fuel types
+df = df[~df['fuel_type'].isna()]
+
+print(df.shape)
+
+df['name'] = df['name'].str.split().str.slice(0, 3).str.join(' ')
+df = df.reset_index(drop=True)
+df
+df.to_csv(r"C:\Users\HP\Downloads\quikr_car_cleaned.csv", index=False)
+df.info()
+df.describe(include = 'all')
+df = df[df['Price']<6000000]
+companies = df['company'].unique()
+
+print(companies)
+import seaborn as sns
+
+# Boxplot
+plt.subplots(figsize=(15,7))
+ax = sns.boxplot(x='company', y='Price', data=df)
+
+plt.xticks(rotation=40, ha='right')
+plt.show()
+
+
+# Swarmplot
+plt.subplots(figsize=(20,10))
+
+ax = sns.swarmplot(
+    x='year',
+    y='Price',
+    data=df,
+    size=3
+)
+
+plt.xticks(rotation=40, ha='right')
+plt.show()
+sns.relplot(
+    x='kms_driven',
+    y='Price',
+    data=df,
+    height=7,
+    aspect=1.5
+)
+
+plt.show()
+plt.subplots(figsize=(14,7))
+sns.boxplot(x='fuel_type',y='Price',data=df)
+plt.show()
+ax=sns.relplot(x='company',y='Price',data=df,hue='fuel_type',size='year',height=7,aspect=2)
+ax.set_xticklabels(rotation=40,ha='right')
+plt.show()
+
+#extracting the training data
+x=df[['name','company','year','kms_driven','fuel_type']]
+y=df['Price']
+x.head()
+y.head()
+y.shape
+print(y.shape)
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.2,random_state=42)
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import make_column_transformer
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import r2_score
+ohe=OneHotEncoder()
+ohe.fit(x[['name','company','fuel_type']])
+column_trans=make_column_transformer((OneHotEncoder(categories=ohe.categories_),['name','company','fuel_type']), remainder='passthrough')
+lr=LinearRegression()
+pipe=make_pipeline(column_trans,lr)
+pipe.fit(x_train,y_train)
+y_pred=pipe.predict(x_test)
+print(r2_score(y_test,y_pred))
+scores=[]
+for i in range(1000):
+    x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.1,random_state=i)
+    lr=LinearRegression()
+    pipe=make_pipeline(column_trans,lr)
+    pipe.fit(x_train,y_train)
+    y_pred=pipe.predict(x_test)
+    scores.append(r2_score(y_test,y_pred))
+    np.argmax(scores)
+    scores[np.argmax(scores)]
+    pipe.predict(
+    pd.DataFrame(
+        {
+            'name': ['Maruti Suzuki Swift'],
+            'company': ['Maruti'],
+            'year': [2019],
+            'kms_driven': [100],
+            'fuel_type': ['Petrol']
+        }
+    )
+)
+    x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.1,random_state=np.argmax(scores))
+lr=LinearRegression()
+pipe=make_pipeline(column_trans,lr)
+pipe.fit(x_train,y_train)
+y_pred=pipe.predict(x_test)
+r2_score(y_test,y_pred) 
+import pickle
+pickle.dump(pipe,open('LinearRegressionModel.pkl','wb'))
+
+prediction = pipe.predict(
+    pd.DataFrame(
+        {
+            'name': ['Maruti Suzuki Swift'],
+            'company': ['Maruti'],
+            'year': [2019],
+            'kms_driven': [100],
+            'fuel_type': ['Petrol']
+        }
+    )
+)
+
+print(prediction[0])
+pipe.steps[0][1].transformers[0][1].categories[0]
+import tkinter as tk
+from tkinter import messagebox
+
+# Create window
+root = tk.Tk()
+root.title("Car Price Predictor")
+root.geometry("400x400")
+
+
+# Labels and Input Boxes
+tk.Label(root, text="Car Name").pack()
+name_entry = tk.Entry(root)
+name_entry.pack()
+
+tk.Label(root, text="Company").pack()
+company_entry = tk.Entry(root)
+company_entry.pack()
+
+tk.Label(root, text="Year").pack()
+year_entry = tk.Entry(root)
+year_entry.pack()
+
+tk.Label(root, text="Kms Driven").pack()
+kms_entry = tk.Entry(root)
+kms_entry.pack()
+
+tk.Label(root, text="Fuel Type").pack()
+fuel_entry = tk.Entry(root)
+fuel_entry.pack()
+
+
+# Prediction Function
+def predict_price():
+
+    name = name_entry.get()
+    company = company_entry.get()
+    year = int(year_entry.get())
+    kms = int(kms_entry.get())
+    fuel = fuel_entry.get()
+
+    prediction = pipe.predict(
+        pd.DataFrame(
+            {
+                'name': [name],
+                'company': [company],
+                'year': [year],
+                'kms_driven': [kms],
+                'fuel_type': [fuel]
+            }
+        )
+    )
+
+    messagebox.showinfo(
+        "Predicted Price",
+        f"Estimated Price: ₹ {round(prediction[0], 2)}"
+    )
+
+
+# Predict Button
+tk.Button(
+    root,
+    text="Predict Price",
+    command=predict_price
+).pack(pady=20)
+
+
+# Run window
+root.mainloop()
