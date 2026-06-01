@@ -1,0 +1,248 @@
+import gdown
+import pandas as pd
+
+file_id = "1taNndH3YiB07n2FIJqAR_nNVgihd_f3v"
+
+gdown.download(
+    f"https://drive.google.com/uc?id={file_id}",
+    "dataset.csv",
+    quiet=False
+)
+# import pandas as pd
+# with open("dataset.csv", "rb") as f:
+#     print(f.read(100))
+import pandas as pd
+
+df = pd.read_csv("dataset.csv", compression="zip")
+
+print(df.head())
+print(df.columns.tolist())
+print(df.shape)
+print(df.info())
+print(df.describe())
+print(df.isnull().sum())
+df['current_score'] = (
+    df.groupby(['ID','innings'])['total_run']
+      .cumsum()
+)
+df['current_wickets'] = (
+    df.groupby(['ID','innings'])['isWicketDelivery']
+      .cumsum()
+)
+df['balls_bowled'] = (
+    df.groupby(['ID','innings'])
+      .cumcount() + 1
+)
+df['current_overs'] = df['balls_bowled'] / 6
+df['runs_last_30_balls'] = (
+    df.groupby(['ID','innings'])['total_run']
+      .rolling(30, min_periods=1)
+      .sum()
+      .reset_index(level=[0,1], drop=True)
+)
+df['wickets_last_30_balls'] = (
+    df.groupby(['ID','innings'])['isWicketDelivery']
+      .rolling(30, min_periods=1)
+      .sum()
+      .reset_index(level=[0,1], drop=True)
+)
+final_scores = (
+    df.groupby(['ID','innings'])['total_run']
+      .sum()
+      .reset_index()
+)
+
+final_scores.rename(
+    columns={'total_run':'final_score'},
+    inplace=True
+)
+df = df.merge(
+    final_scores,
+    on=['ID','innings']
+)
+model_df = df[
+[
+    'BattingTeam',
+    'current_score',
+    'current_wickets',
+    'current_overs',
+    'runs_last_30_balls',
+    'wickets_last_30_balls',
+    'final_score'
+]
+]
+model_df = pd.get_dummies(
+    model_df,
+    columns=['BattingTeam']
+)
+
+X = model_df.drop('final_score', axis=1)
+
+y = model_df['final_score']
+from sklearn.model_selection import train_test_split
+
+X = model_df.drop('final_score', axis=1)
+y = model_df['final_score']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+print(X_train.shape)
+print(X_test.shape)
+from sklearn.ensemble import RandomForestRegressor
+
+model = RandomForestRegressor(
+    n_estimators=100,
+    random_state=42
+)
+
+model.fit(X_train, y_train)
+# print(model_df.dtypes)
+from sklearn.metrics import mean_absolute_error
+
+predictions = model.predict(X_test)
+
+print("MAE:", mean_absolute_error(y_test, predictions))
+import tkinter as tk
+from tkinter import ttk
+
+#################################################################
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+# Assuming your trained model variable is named 'model'
+
+teams = [
+    'Chennai Super Kings',
+    'Delhi Capitals',
+    'Kolkata Knight Riders',
+    'Mumbai Indians',
+    'Punjab Kings',
+    'Rajasthan Royals',
+    'Royal Challengers Bangalore',
+    'Sunrisers Hyderabad'
+]
+
+def predict():
+    try:
+        batting_team = team_var.get()
+
+        current_score = float(score_entry.get())
+        wickets = float(wickets_entry.get())
+        overs = float(overs_entry.get())
+        runs_last_30 = float(last5runs_entry.get())
+        wickets_last_30 = float(last5wickets_entry.get())
+
+        data = {
+            'current_score': current_score,
+            'current_wickets': wickets,
+            'current_overs': overs,
+            'runs_last_30_balls': runs_last_30,
+            'wickets_last_30_balls': wickets_last_30
+        }
+
+        # Add team dummy columns
+        for team in teams:
+            data[f'BattingTeam_{team}'] = 1 if team == batting_team else 0
+
+        import pandas as pd
+
+        input_df = pd.DataFrame([data])
+
+        # Match training columns
+        input_df = input_df.reindex(columns=X_train.columns, fill_value=0)
+
+        prediction = model.predict(input_df)[0]
+
+        result_label.config(
+            text=f"Predicted Final Score: {round(prediction)}"
+        )
+
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+
+
+root = tk.Tk()
+root.title("IPL Score Predictor")
+root.geometry("420x420")
+
+title = tk.Label(
+    root,
+    text="🏏 IPL Score Predictor",
+    font=("Arial", 16, "bold")
+)
+title.pack(pady=10)
+
+team_var = tk.StringVar()
+team_var.set(teams[0])
+
+ttk.Label(root, text="Batting Team").pack()
+ttk.Combobox(
+    root,
+    textvariable=team_var,
+    values=teams,
+    state="readonly"
+).pack(pady=5)
+
+ttk.Label(root, text="Current Score").pack()
+score_entry = ttk.Entry(root)
+score_entry.pack()
+
+ttk.Label(root, text="Wickets Lost").pack()
+wickets_entry = ttk.Entry(root)
+wickets_entry.pack()
+
+ttk.Label(root, text="Overs Completed").pack()
+overs_entry = ttk.Entry(root)
+overs_entry.pack()
+
+ttk.Label(root, text="Runs in Last 5 Overs").pack()
+last5runs_entry = ttk.Entry(root)
+last5runs_entry.pack()
+
+ttk.Label(root, text="Wickets in Last 5 Overs").pack()
+last5wickets_entry = ttk.Entry(root)
+last5wickets_entry.pack()
+
+ttk.Button(
+    root,
+    text="Predict Score",
+    command=predict
+).pack(pady=15)
+
+result_label = tk.Label(
+    root,
+    text="",
+    font=("Arial", 14, "bold")
+)
+result_label.pack()
+
+root.mainloop()
+
+
+
+
+
+#########################################################################################
+### Project Description
+
+This project is an IPL score prediction system built using historical IPL ball-by-ball data and machine learning. The dataset is automatically downloaded from Google Drive and processed to create match-state features such as current score, wickets lost, overs completed, runs scored in the last 30 balls, and wickets lost in the last 30 balls. These features are engineered from raw delivery-level data using cumulative and rolling calculations for each innings.
+
+After preprocessing, the batting team is encoded using one-hot encoding, and a Random Forest Regressor is trained to predict the final innings score. The model learns relationships between the current state of an innings and the eventual total score achieved by the batting team. Model performance is evaluated using Mean Absolute Error (MAE) on a held-out test set.
+
+To make the model interactive, a Tkinter-based graphical user interface is included. Users can enter live match information such as batting team, current score, wickets lost, overs completed, recent runs scored, and recent wickets lost. Based on these inputs, the trained model predicts the projected final score for the innings in real time.
+
+### Technologies Used
+
+* Python
+* Pandas
+* NumPy
+* Scikit-Learn
+* Random Forest Regression
+* Tkinter
+* GDown
