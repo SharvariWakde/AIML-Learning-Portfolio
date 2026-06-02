@@ -1,0 +1,251 @@
+import gdown
+import pandas as pd
+
+file_id = "1SRfIZxhukyphUV81sUsgHQeCIFXiFsGJ"
+
+gdown.download(
+    f"https://drive.google.com/uc?id={file_id}",
+    "dataset.csv",
+    quiet=False
+)
+
+df = pd.read_csv("dataset.csv")
+print(df.head())
+print(df.describe())
+print(df.info())
+print(df.isnull().sum())
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+print(df.columns)
+print(df.head())
+
+# replace the null values with a null string
+# replace the null values with a null string
+df = df.fillna('')
+
+# label encoding
+df['Category'] = df['Category'].map({
+    'spam': 0,
+    'ham': 1
+})
+
+# separating the data as texts and labels
+X = df['Message']
+Y = df['Category']
+# splitting the data
+X_train, X_test, Y_train, Y_test = train_test_split(
+    X, Y, test_size=0.2, random_state=3
+)
+
+# feature extraction
+feature_extraction = TfidfVectorizer(
+    min_df=1,
+    stop_words='english',
+    lowercase=True
+)
+
+X_train_features = feature_extraction.fit_transform(X_train)
+X_test_features = feature_extraction.transform(X_test)
+
+# convert labels to integer
+Y_train = Y_train.astype(int)
+Y_test = Y_test.astype(int)
+
+# training the model
+model = LogisticRegression()
+model.fit(X_train_features, Y_train)
+
+# evaluating the model
+prediction_on_training_data = model.predict(X_train_features)
+accuracy_on_training_data = accuracy_score(
+    Y_train,
+    prediction_on_training_data
+)
+
+print('Accuracy on training data :', accuracy_on_training_data)
+
+prediction_on_test_data = model.predict(X_test_features)
+accuracy_on_test_data = accuracy_score(
+    Y_test,
+    prediction_on_test_data
+)
+
+print('Accuracy on test data :', accuracy_on_test_data)
+#TKinter
+import tkinter as tk
+from tkinter import messagebox
+
+# Function to predict spam or ham
+def check_spam():
+    email_text = text_box.get("1.0", tk.END).strip()
+
+    if email_text == "":
+        messagebox.showwarning("Input Error", "Please enter an email/message.")
+        return
+
+    input_data_features = feature_extraction.transform([email_text])
+    prediction = model.predict(input_data_features)
+
+    if prediction[0] == 1:
+        result_label.config(text="Result: HAM MAIL", fg="green")
+    else:
+        result_label.config(text="Result: SPAM MAIL", fg="red")
+
+
+# Create main window
+root = tk.Tk()
+root.title("Email Spam Detection")
+root.geometry("700x500")
+
+# Heading
+title_label = tk.Label(
+    root,
+    text="Email Spam Detection System",
+    font=("Arial", 18, "bold")
+)
+title_label.pack(pady=10)
+
+# Accuracy display
+accuracy_label = tk.Label(
+    root,
+    text=f"Model Accuracy: {accuracy_on_test_data*100:.2f}%",
+    font=("Arial", 12)
+)
+accuracy_label.pack(pady=5)
+
+# Instruction
+instruction_label = tk.Label(
+    root,
+    text="Paste Email/Text Below:",
+    font=("Arial", 12)
+)
+instruction_label.pack()
+
+# Text box
+text_box = tk.Text(root, height=12, width=80)
+text_box.pack(pady=10)
+
+# Predict button
+predict_button = tk.Button(
+    root,
+    text="Check Spam",
+    font=("Arial", 12, "bold"),
+    command=check_spam
+)
+predict_button.pack(pady=10)
+
+# Result label
+result_label = tk.Label(
+    root,
+    text="Result will appear here",
+    font=("Arial", 14, "bold")
+)
+result_label.pack(pady=15)
+
+# Run application
+root.mainloop()
+
+
+
+
+
+# predictive system
+# input_mail = [
+#     "Congratulations! You have won a free prize. Click here now."
+# ]
+
+# input_data_features = feature_extraction.transform(input_mail)
+
+# prediction = model.predict(input_data_features)
+
+# if prediction[0] == 1:
+#     print("Ham mail")
+# else:
+#     print("Spam mail")
+
+
+
+
+
+##################################################################################################################################################
+# Email Spam Detection System using Machine Learning
+
+## Overview
+
+This project is a Machine Learning-based Email/SMS Spam Detection System developed using Python. The system classifies incoming messages as either **Spam** or **Ham (Not Spam)** using Natural Language Processing (NLP) techniques and a Logistic Regression classifier.
+
+The model is trained on a labeled dataset containing spam and ham messages. Text data is converted into numerical features using **TF-IDF (Term Frequency-Inverse Document Frequency)** vectorization, enabling the machine learning model to understand and classify text effectively.
+
+A user-friendly **Tkinter GUI** is integrated into the project, allowing users to paste any email or message and instantly determine whether it is spam or legitimate.
+
+## Features
+
+* Data preprocessing and cleaning
+* Handling missing values
+* Label encoding (Spam = 0, Ham = 1)
+* TF-IDF text vectorization
+* Logistic Regression classification
+* Model accuracy evaluation
+* Interactive Tkinter graphical user interface
+* Real-time spam prediction for user-entered messages
+
+## Technologies Used
+
+* Python
+* Pandas
+* NumPy
+* Scikit-learn
+* Tkinter
+* Natural Language Processing (NLP)
+
+## Machine Learning Workflow
+
+1. Load and preprocess the dataset.
+2. Handle missing values.
+3. Encode categorical labels.
+4. Split data into training and testing sets.
+5. Convert text into TF-IDF feature vectors.
+6. Train a Logistic Regression model.
+7. Evaluate model performance using accuracy metrics.
+8. Predict whether a user-entered message is spam or ham through the GUI.
+
+## Model Performance
+
+The trained model achieves approximately:
+
+* Training Accuracy: ~96.7%
+* Testing Accuracy: ~96.6%
+
+These results indicate strong generalization performance on unseen messages.
+
+## Usage
+
+1. Run the Python application.
+2. Enter or paste an email/message into the text area.
+3. Click the **Check Spam** button.
+4. The system will display:
+
+   * Spam Mail or Ham Mail
+   * Model Accuracy
+
+## Applications
+
+* Email filtering
+* SMS spam detection
+* Cybersecurity awareness
+* Communication screening systems
+
+## Future Enhancements
+
+* Support for multiple machine learning algorithms.
+* Email attachment analysis.
+* Deep learning-based classification.
+* Web deployment using Flask or Django.
+* Real-time email inbox integration.
+
+## Author
+
+Developed as a Machine Learning and NLP project for spam detection and classification.
